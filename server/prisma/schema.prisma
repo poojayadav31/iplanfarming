@@ -1,0 +1,883 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(CUSTOMER)
+  farmer    Farmer?
+  customer  Customer?
+  expert    Expert?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Farmer {
+  id                     String       @id @default(uuid())
+  userId                 String       @unique
+  isAccepted             Boolean      @default(true)
+  /// null until the farmer completes the first-time onboarding wizard
+  onboardingCompletedAt  DateTime?
+  /// New / Some / Expert — sets default UI complexity and crop filter
+  experienceLevel        String       @default("New")
+  farms                  Farm[]
+  orders                 Order[]
+  issues                 FarmIssue[]
+  achievements           Achievement[]
+  questions              FarmerQuestion[]
+  buyGroups              BuyGroup[]
+  user                   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+}
+
+model Customer {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  isAccepted Boolean  @default(true)
+  demands    Demand[]
+  orders     Order[]
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Expert {
+  id               String                  @id @default(uuid())
+  userId           String                  @unique
+  isAccepted       Boolean                 @default(true)
+  specialization   String?
+  bio              String?
+  regionDistricts  String[]
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  advisories       ExpertAdvisory[]
+  cropSuggestions  ExpertCropSuggestion[]
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+}
+
+model ExpertAdvisory {
+  id        String   @id @default(uuid())
+  expertId  String
+  farmId    String?
+  title     String
+  body      String
+  category  String   // soil | weather | market | pest | crop | general
+  season    String?  // Kharif | Rabi | Zaid | null = all seasons
+  priority  String   @default("normal") // low | normal | high | urgent
+  isGlobal  Boolean  @default(false)
+  expert    Expert   @relation(fields: [expertId], references: [id], onDelete: Cascade)
+  farm      Farm?    @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ExpertCropSuggestion {
+  id          String   @id @default(uuid())
+  expertId    String
+  zoneId      String
+  farmId      String
+  cropName    String
+  reason      String
+  season      String
+  status      String   @default("PENDING") // PENDING | ACCEPTED | REJECTED
+  farmerNote  String?
+  expert      Expert   @relation(fields: [expertId], references: [id], onDelete: Cascade)
+  zone        Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Farm {
+  id               String         @id @default(uuid())
+  farmerId         String
+  name             String
+  boundary         Json
+  centroid         Json
+  areaSquareMeters Float
+  areaBigha        Float
+  areaAcres        Float
+  areaHectares     Float
+  perimeter        Float
+  convexityScore   Float
+  address          String?
+  district         String
+  state            String         @default("Chhattisgarh")
+  farmer           Farmer         @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  zones            Zone[]
+  farmFinancials   FarmFinancials?
+  waterSources     WaterSource[]
+  calendarTasks    CalendarTask[]
+  supplies           Supply[]
+  expertAdvisories   ExpertAdvisory[]
+  expertSuggestions  ExpertCropSuggestion[]
+  designs            FarmDesign[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+}
+
+model Zone {
+  id                  String               @id @default(uuid())
+  farmId              String
+  name                String
+  zoneNumber          Int
+  boundary            Json
+  centroid            Json
+  areaSquareMeters    Float
+  areaBigha           Float
+  farm                Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  soilReport          SoilReport?
+  cropAssignment      ZoneCropAssignment?
+  irrigationSchedules IrrigationSchedule[]
+  calendarTasks       CalendarTask[]
+  supplies            Supply[]
+  expertSuggestions   ExpertCropSuggestion[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model SoilReport {
+  id              String   @id @default(uuid())
+  zoneId          String   @unique
+  farmId          String
+  soilType        String
+  drainageSpeed   String
+  phLevel         Float    @default(6.5)
+  earthwormCount  Int      @default(3)
+  phScore         Float
+  drainageScore   Float
+  soilTypeScore   Float
+  earthwormScore  Float
+  soilHealthScore Float
+  scoreLabel      String
+  recommendations Json
+  improvementTips Json
+  zone            Zone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SoilCropReference {
+  id           String  @id @default(uuid())
+  soilType     String
+  cropName     String
+  season       String
+  phMin        Float
+  phMax        Float
+  soilFitNotes String?
+}
+
+model Crop {
+  id                                   String               @id @default(uuid())
+  name                                 String               @unique
+  scientificName                       String?
+  suitableSoilTypes                    String[]
+  minPh                                Float
+  maxPh                                Float
+  season                               String
+  estimatedDurationMonths              Int
+  weeklyWaterRequirementLitersPerAcre  Float                @default(5000)
+  /// Fast | Balanced | Slow | Any
+  preferredDrainage                    String               @default("Any")
+  /// Calendar month (1-12) when planting should begin
+  plantingWindowStart                  Int                  @default(1)
+  /// Calendar month (1-12) when planting window closes
+  plantingWindowEnd                    Int                  @default(12)
+  minTempC                             Float                @default(10)
+  maxTempC                             Float                @default(45)
+  /// drought-tolerant | moderate | water-loving
+  rainfallTolerance                    String               @default("moderate")
+  /// Minimum soil health score (0-100) this crop needs to perform well
+  minSoilHealthScore                   Int                  @default(0)
+  /// How many weeks the growing season lasts — used as the calendar window
+  seasonDurationWeeks                  Int                  @default(20)
+  /// Botanical/agronomic family — used for crop rotation logic (Cereal, Pulse, Cotton, Tuber, Vegetable, Spice, Fruit)
+  cropFamily                           String               @default("Other")
+  /// beginner | intermediate | expert — guides farmers picking suitable crops
+  riskLevel                            String               @default("intermediate")
+  /// Seed required per acre (kg) — used by seed-rate calculator
+  seedKgPerAcre                        Float                @default(20)
+  /// Plant spacing notes (e.g., "22.5 cm × 5 cm")
+  spacingNotes                         String?
+  irrigationSchedules                  IrrigationSchedule[]
+}
+
+/// Economic data for the multilayer natural farming model (Haldi, Papaya, Creepers, Leafy Veg).
+/// Kept separate from Crop to avoid coupling recommendation logic with financial data.
+model CropEconomics {
+  id                      String               @id @default(uuid())
+  cropName                String               @unique
+  season                  String
+  durationMonths          Int
+  yieldPerAcreKg          Float
+  rawSalePricePerKg       Float
+  /// Sale price after processing (e.g., raw turmeric → turmeric powder)
+  processedSalePricePerKg Float
+  /// Per-kg cost to convert raw produce to processed (drying, grinding, packaging)
+  processingCostPerKg     Float
+  seedCostPerAcre         Float
+  zoneAssignments         ZoneCropAssignment[]
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+}
+
+/// Farmer's crop assignment for a zone. One zone = one crop choice.
+/// When absent, the planning service auto-suggests based on soil report or zone size ranking.
+model ZoneCropAssignment {
+  id               String        @id @default(uuid())
+  zoneId           String        @unique
+  cropEconomicsId  String
+  notes            String?
+  varietyName      String?
+  zone             Zone          @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  cropEconomics    CropEconomics @relation(fields: [cropEconomicsId], references: [id], onDelete: Restrict)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+/// History of past crop assignments per zone — used for crop rotation analysis.
+/// A row is appended whenever a zone's active assignment is replaced.
+model ZoneCropHistory {
+  id              String   @id @default(uuid())
+  zoneId          String
+  cropName        String
+  startedAt       DateTime
+  endedAt         DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([zoneId, endedAt])
+}
+
+/// Farm-level infrastructure and overhead costs.
+/// One record per farm; created on first visit with sensible defaults.
+model FarmFinancials {
+  id                 String   @id @default(uuid())
+  farmId             String   @unique
+  /// One-time land bunding and layout cost per acre — null = use global default
+  landLayoutCost     Float?
+  /// Drip irrigation / sprinkler setup cost per acre — null = use global default
+  dripIrrigationCost Float?
+  /// Solar dryer flat cost — null = use global default
+  solarDryerCost     Float?
+  /// Annual labour cost — null = use global default
+  annualLabourCost   Float?
+  /// Labour rate per hour for weekly plan — null = use global default
+  labourRatePerHour  Float?
+  /// When true natural inputs (Jeevamrit) are home-prepared — cost = ₹0
+  jeevamritHomemade  Boolean  @default(true)
+  farm               Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+/// Farm water supply — ponds, borewells, canals, tanks, rivers.
+/// One farm can have multiple water sources; their current levels are deducted on schedule completion.
+model WaterSource {
+  id                  String               @id @default(uuid())
+  farmId              String
+  name                String
+  sourceType          WaterSourceType
+  totalCapacityLiters Float
+  currentLevelLiters  Float
+  farm                Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  irrigationSchedules IrrigationSchedule[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+/// Auto-generated weekly irrigation task for a zone × crop combination.
+/// The Eco-Hydraulic Engine derives adjustedWaterLiters from zone acreage,
+/// crop baseline need, and the composite Soil Retention Multiplier.
+model IrrigationSchedule {
+  id                      String           @id @default(uuid())
+  zoneId                  String
+  farmId                  String
+  cropId                  String
+  waterSourceId           String?
+  weekStartDate           DateTime
+  weekEndDate             DateTime
+  areaAcres               Float
+  soilRetentionMultiplier Float
+  baseWaterLiters         Float
+  adjustedWaterLiters     Float
+  irrigationMethod        String
+  status                  IrrigationStatus @default(PENDING)
+  completedAt             DateTime?
+  completedLiters         Float?
+  notes                   String?
+  zone                    Zone             @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  crop                    Crop             @relation(fields: [cropId], references: [id])
+  waterSource             WaterSource?     @relation(fields: [waterSourceId], references: [id], onDelete: SetNull)
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+}
+
+enum Role {
+  ADMIN
+  FARMER
+  CUSTOMER
+  EXPERT
+}
+
+enum WaterSourceType {
+  POND
+  BOREWELL
+  CANAL
+  TANK
+  RIVER
+}
+
+enum IrrigationStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+}
+
+// ─── Supply & Demand Module ───────────────────────────────────────────────────
+
+enum SupplyStatus {
+  UPCOMING
+  AVAILABLE
+  PARTIALLY_SOLD
+  SOLD_OUT
+  EXPIRED
+}
+
+enum ProduceForm {
+  RAW
+  PROCESSED
+}
+
+enum ProduceGrade {
+  A
+  B
+  C
+}
+
+enum DemandStatus {
+  OPEN
+  PARTIALLY_FULFILLED
+  FULFILLED
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PACKED
+  DISPATCHED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  BANK_TRANSFER
+  UPI
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+}
+
+enum CancelledBy {
+  FARMER
+  CUSTOMER
+}
+
+/// Auto-created when a harvest CalendarTask is generated (75 days ahead).
+/// Farmer can edit price, quantity, grade, and publish when ready.
+model Supply {
+  id                   String       @id @default(uuid())
+  farmId               String
+  zoneId               String?
+  calendarTaskId       String?      @unique
+  cropName             String
+  predictedHarvestDate DateTime     @db.Date
+  estimatedQuantityKg  Float
+  availableQuantityKg  Float
+  pricePerKg           Float
+  minOrderKg           Float        @default(10)
+  grade                ProduceGrade @default(A)
+  form                 ProduceForm  @default(RAW)
+  status               SupplyStatus @default(UPCOMING)
+  isPublished          Boolean      @default(false)
+  notes                String?
+  district             String
+  state                String       @default("Chhattisgarh")
+  farm                 Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  zone                 Zone?        @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  calendarTask         CalendarTask? @relation(fields: [calendarTaskId], references: [id], onDelete: SetNull)
+  orders               Order[]
+  demandMatches        DemandMatch[]
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([cropName, status, district])
+  @@index([farmId, status])
+  @@index([predictedHarvestDate])
+}
+
+/// Posted by a customer — what they want to buy and by when.
+model Demand {
+  id                String       @id @default(uuid())
+  customerId        String
+  cropName          String
+  quantityKg        Float
+  maxPricePerKg     Float?
+  neededByDate      DateTime     @db.Date
+  preferredDistrict String?
+  preferredState    String       @default("Chhattisgarh")
+  form              ProduceForm  @default(RAW)
+  status            DemandStatus @default(OPEN)
+  notes             String?
+  customer          Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  orders            Order[]
+  demandMatches     DemandMatch[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([cropName, status])
+  @@index([customerId])
+}
+
+/// Placed by a customer against a Supply listing.
+model Order {
+  id              String        @id @default(uuid())
+  supplyId        String
+  customerId      String
+  farmerId        String
+  demandId        String?
+  quantityKg      Float
+  pricePerKg      Float
+  totalAmount     Float
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   PaymentMethod @default(COD)
+  paymentStatus   PaymentStatus @default(PENDING)
+  deliveryAddress String
+  farmerNote      String?
+  customerNote    String?
+  cancelledBy     CancelledBy?
+  cancelReason    String?
+  supply          Supply        @relation(fields: [supplyId], references: [id], onDelete: Restrict)
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  farmer          Farmer        @relation(fields: [farmerId], references: [id], onDelete: Restrict)
+  demand          Demand?       @relation(fields: [demandId], references: [id], onDelete: SetNull)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([farmerId, status])
+  @@index([customerId, status])
+  @@index([supplyId])
+}
+
+/// Links a supply to a matching demand so both parties are notified.
+model DemandMatch {
+  id         String   @id @default(uuid())
+  supplyId   String
+  demandId   String
+  distanceKm Float?
+  notifiedAt DateTime @default(now())
+  supply     Supply   @relation(fields: [supplyId], references: [id], onDelete: Cascade)
+  demand     Demand   @relation(fields: [demandId], references: [id], onDelete: Cascade)
+
+  @@unique([supplyId, demandId])
+}
+
+/// Expert-editable lifecycle task template for a crop.
+/// The calendar engine reads these rows (instead of hardcoded JS) to generate zone tasks.
+model CropLifecycleTemplate {
+  id           String   @id @default(uuid())
+  cropName     String
+  weekOffset   Int
+  taskType     String   // field_prep | planting | fertilizer | weeding | mulching | pest_control | thinning | training | pruning | harvest | observation
+  category     String   // crop_care | inputs | harvest | observation
+  title        String
+  priority     String   @default("morning")   // morning | afternoon
+  workers      Int      @default(2)
+  hoursPerAcre Float    @default(8)
+  recipeKey    String?  // Jeevamrit | Beejamrit | Agniastra | null
+  isObservation Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([cropName])
+}
+
+enum CalendarTaskStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+}
+
+/// Persisted lifecycle task for a zone × crop — one row per task occurrence.
+model CalendarTask {
+  id             String             @id @default(uuid())
+  farmId         String
+  zoneId         String?
+  cropName       String             @default("")
+  taskType       String
+  category       String
+  scheduledDate  DateTime           @db.Date
+  title          String
+  priority       String             @default("morning")
+  labourWorkers  Int                @default(1)
+  labourHours    Float              @default(1)
+  recipeKey      String?
+  weekOffset     Int                @default(0)
+  isCustom       Boolean            @default(false)
+  status         CalendarTaskStatus @default(PENDING)
+  completedAt    DateTime?
+  completedNote  String?
+  notes          String?
+  checklistItems Json?
+  supply         Supply?
+  farm           Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  zone           Zone?              @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([zoneId, taskType, scheduledDate])
+  @@index([farmId, scheduledDate])
+  @@index([farmId, isCustom])
+}
+
+
+/// Issues / problems reported by farmers — for failure-recovery flow.
+model FarmIssue {
+  id          String   @id @default(uuid())
+  farmerId    String
+  farmId      String
+  zoneId      String?
+  title       String
+  description String
+  symptom     String?
+  photoUrl    String?
+  status      String   @default("OPEN")
+  resolution  String?
+  resolvedAt  DateTime?
+  farmer      Farmer   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([farmerId, status])
+}
+
+/// Free-text questions from farmers to experts — separate from advisories.
+model FarmerQuestion {
+  id          String   @id @default(uuid())
+  farmerId    String
+  question    String
+  answer      String?
+  answeredAt  DateTime?
+  answeredBy  String?
+  category    String   @default("general")
+  farmer      Farmer   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([farmerId, createdAt])
+}
+
+/// Achievements / badges — encourages new farmers to keep using the app.
+model Achievement {
+  id           String   @id @default(uuid())
+  farmerId     String
+  badgeKey     String
+  title        String
+  description  String
+  earnedAt     DateTime @default(now())
+  farmer       Farmer   @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  @@unique([farmerId, badgeKey])
+}
+
+/// Photo journal entries per zone — visual record of crop progress.
+model FarmPhoto {
+  id          String   @id @default(uuid())
+  zoneId      String
+  farmId      String
+  photoUrl    String
+  caption     String?
+  weekIntoSeason Int?
+  createdAt   DateTime @default(now())
+  @@index([zoneId, createdAt])
+}
+
+
+/// Actual harvest yields & sale prices — closes the learning loop for recommendations.
+model HarvestRecord {
+  id              String   @id @default(uuid())
+  zoneId          String
+  farmId          String
+  cropName        String
+  varietyName     String?
+  yieldKg         Float
+  pricePerKg      Float?
+  totalRevenue    Float?
+  totalCost       Float?
+  netProfit       Float?
+  notes           String?
+  harvestedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  @@index([zoneId, harvestedAt])
+  @@index([farmId, cropName])
+}
+
+/// Companion planting catalogue — primary crop + companions + reason.
+model CropPairing {
+  id              String   @id @default(uuid())
+  primaryCrop     String
+  companionCrop   String
+  benefit         String
+  rowRatio        String?
+  spacingNotes    String?
+  source          String   @default("ZBNF")
+  @@index([primaryCrop])
+}
+
+/// Cover crops between seasons (nitrogen-fixers, soil rebuilders).
+model CoverCrop {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  durationWeeks   Int
+  nitrogenFixedKgPerAcre Float
+  bestForSeason   String   // "post-Kharif" | "post-Rabi" | "summer-fallow"
+  description     String
+  preparationNotes String?
+}
+
+/// Crop varieties / cultivars by region.
+model CropVariety {
+  id              String   @id @default(uuid())
+  cropName        String
+  varietyName     String
+  recommendedFor  String[]    // districts
+  yieldPotential  Float?      // kg/acre
+  durationDays    Int?
+  pestResistance  String?     // resistant pest names
+  notes           String?
+  @@index([cropName])
+}
+
+/// Mandi (wholesale market) prices, cached from AGMARKNET / manual entry.
+model MandiPrice {
+  id              String   @id @default(uuid())
+  cropName        String
+  district        String
+  pricePerQuintal Float
+  msp             Float?
+  recordedAt      DateTime @default(now())
+  source          String   @default("manual")
+  @@index([cropName, district, recordedAt])
+}
+
+/// Government schemes catalogue (PM-KISAN, PMFBY, e-NAM, etc.).
+model GovScheme {
+  id              String   @id @default(uuid())
+  schemeName      String   @unique
+  category        String   // "income-support" | "insurance" | "market" | "credit"
+  benefitSummary  String
+  eligibilityNotes String
+  applyUrl        String?
+  active          Boolean  @default(true)
+}
+
+/// District-level pest outbreak signals derived from FarmIssue aggregation.
+model PestAlert {
+  id              String   @id @default(uuid())
+  district        String
+  cropName        String?
+  pestName        String
+  reportCount     Int
+  lastReportedAt  DateTime
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([district, isActive])
+}
+
+/// Daily 5-min check-in by farmer per zone.
+model DailyCheckIn {
+  id              String   @id @default(uuid())
+  zoneId          String
+  farmerId        String
+  pestSeen        Boolean  @default(false)
+  leavesHealthy   Boolean  @default(true)
+  soilMoist       Boolean  @default(true)
+  notes           String?
+  photoUrl        String?
+  createdAt       DateTime @default(now())
+  @@index([zoneId, createdAt])
+}
+
+/// Season goals set by farmer + auto-feasibility check.
+model SeasonGoal {
+  id              String   @id @default(uuid())
+  farmerId        String
+  season          String
+  cropName        String
+  targetRevenue   Float
+  targetYieldKg   Float?
+  feasibilityScore Int?
+  feasibilityNotes String?
+  achieved        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([farmerId, season])
+}
+
+/// Knowledge base — public Q&A from FarmerQuestion + expert advisories.
+model KnowledgeArticle {
+  id              String   @id @default(uuid())
+  title           String
+  body            String
+  category        String
+  tags            String[]
+  sourceQuestionId String?
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([category])
+}
+
+/// Bulk-buy / cooperative-sell groups.
+model BuyGroup {
+  id              String   @id @default(uuid())
+  district        String
+  itemName        String   // "Cow Urine", "Mustard Cake", "Wheat HD-2967 seeds"
+  totalQuantity   Float
+  unit            String
+  pricePerUnit    Float?
+  organiserFarmerId String
+  organiser       Farmer   @relation(fields: [organiserFarmerId], references: [id])
+  contactPhone    String?
+  status          String   @default("OPEN") // OPEN | LOCKED | DELIVERED
+  closesAt        DateTime?
+  createdAt       DateTime @default(now())
+  @@index([district, status])
+}
+
+/// Equipment for rent (tractor, sprayer, etc.) — listed by farmers.
+model EquipmentListing {
+  id              String   @id @default(uuid())
+  ownerFarmerId   String
+  equipmentType   String   // "Tractor" | "Sprayer" | "Harvester"
+  district        String
+  hourlyRate      Float?
+  dailyRate       Float?
+  contactPhone    String?
+  notes           String?
+  isAvailable     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  @@index([district, equipmentType])
+}
+
+/// Pre-season checklist items per farmer-zone.
+model PreSeasonTask {
+  id              String   @id @default(uuid())
+  farmerId        String
+  zoneId          String?
+  cropName        String
+  title           String
+  category        String   // "seed" | "input" | "equipment" | "land-prep"
+  dueDate         DateTime
+  isDone          Boolean  @default(false)
+  notes           String?
+  createdAt       DateTime @default(now())
+  @@index([farmerId, dueDate])
+}
+
+/// Soil report snapshot history — captures every save so we can chart trends.
+model SoilReportSnapshot {
+  id              String   @id @default(uuid())
+  zoneId          String
+  soilType        String
+  drainageSpeed   String
+  phLevel         Float
+  earthwormCount  Int
+  soilHealthScore Float
+  recordedAt      DateTime @default(now())
+  @@index([zoneId, recordedAt])
+}
+
+/// Border / trap crops — perimeter plantings that deter pests for a primary crop.
+model BorderCrop {
+  id              String   @id @default(uuid())
+  primaryCrop     String
+  borderCrop      String
+  purpose         String   // "pest-deterrent" | "windbreak" | "trap-crop" | "pollinator"
+  notes           String?
+  @@index([primaryCrop])
+}
+
+/// Successive sowing batches — splits a zone into N batches for staggered harvest.
+model SowingBatch {
+  id              String   @id @default(uuid())
+  zoneId          String
+  batchNumber     Int
+  cropName        String
+  plannedSowDate  DateTime
+  actualSowDate   DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  @@index([zoneId, plannedSowDate])
+}
+
+/// Expert-editable symptom suggestions shown instantly on the Report Issue page.
+model SymptomSuggestion {
+  id         String   @id @default(uuid())
+  symptom    String   @unique  // machine key e.g. "yellowing_leaves"
+  label      String            // display name e.g. "Yellow leaves"
+  suggestion String            // advice text shown to farmer
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+}
+
+/// Platform-wide default economics rates set by experts.
+/// A single row (id = "global") holds all defaults.
+/// Per-farm overrides in FarmFinancials take precedence.
+model EconomicsConfig {
+  id                 String   @id @default("global")
+  /// Land bunding + layout cost per acre (₹)
+  landLayoutCostPerAcre     Float    @default(12500)
+  /// Drip irrigation / sprinkler setup cost per acre (₹)
+  dripIrrigationCostPerAcre Float    @default(40000)
+  /// Solar dryer flat cost per farm (₹)
+  solarDryerCostFlat        Float    @default(13500)
+  /// Annual labour cost per farm (₹) — 2 workers default
+  annualLabourCost          Float    @default(576000)
+  /// Labour rate per hour for weekly plan cost calculations (₹)
+  labourRatePerHour         Float    @default(100)
+  /// When true, Jeevamrit natural inputs are homemade — cost = ₹0
+  jeevamritHomemade         Boolean  @default(true)
+  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now())
+}
+
+/// Saved layouts and bed plans created in Farm Designer Studio.
+/// Stored independently without affecting existing farm mapping and zone geometry.
+model FarmDesign {
+  id             String   @id @default(uuid())
+  farmId         String
+  name           String   @default("Untitled Farm Layout")
+  version        Int      @default(1)
+  status         String   @default("DRAFT") // DRAFT | FINAL
+  gridSizeMeters Float    @default(2.0)
+  designData     Json     // { beds: [...], crops: [...], trees: [...], elements: [...], layers: {...}, settings: {...} }
+  previewImage   String?  // base64 thumbnail or data URL
+  notes          String?
+  farm           Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([farmId, status])
+}
+

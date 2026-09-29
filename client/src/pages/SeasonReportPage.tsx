@@ -1,0 +1,112 @@
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { Printer, FileText } from 'lucide-react';
+import DashboardShell from '../components/DashboardShell';
+import { getSeasonReport } from '../lib/api';
+
+interface SeasonReport {
+  farm: { name: string; district: string };
+  zone: { id: string; name: string; areaBigha: number };
+  soilReport: unknown;
+  crop: { cropName: string } | null;
+  harvest: { yieldKg: number; pricePerKg: number | null; totalRevenue: number | null; netProfit: number | null; harvestedAt: string; varietyName: string | null } | null;
+  compliance: number;
+  tasksTotal: number;
+  tasksCompleted: number;
+  issuesCount: number;
+  photos: Array<{ photoUrl: string; caption: string | null }>;
+  generatedAt: string;
+}
+
+export default function SeasonReportPage() {
+  const { zoneId } = useParams();
+  const [report, setReport] = useState<SeasonReport | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!zoneId) return;
+    getSeasonReport(zoneId).then((d) => setReport(d as SeasonReport)).catch(() => {}).finally(() => setLoading(false));
+  }, [zoneId]);
+
+  if (loading) return <DashboardShell title="Season Report" subtitle="Loading..."><div className="h-32 animate-pulse rounded-3xl bg-stone-200" /></DashboardShell>;
+  if (!report) return <DashboardShell title="Season Report" subtitle=""><p>Could not load report</p></DashboardShell>;
+
+  const onPrint = () => window.print();
+
+  return (
+    <DashboardShell title="End-of-Season Report" subtitle={`${report.farm.name} · ${report.zone.name}`}>
+      <div className="space-y-4">
+        <button onClick={onPrint} className="no-print flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">
+          <Printer className="h-4 w-4" />
+          Print / Save as PDF
+        </button>
+
+        <div className="rounded-[28px] border border-stone-200 bg-white p-8 shadow-sm print:border-0 print:shadow-none print:p-0">
+          <div className="border-b-4 border-emerald-600 pb-4">
+            <h1 className="text-3xl font-bold text-stone-900">Season Report</h1>
+            <p className="mt-1 text-sm text-stone-600">Generated {new Date(report.generatedAt).toLocaleDateString()}</p>
+          </div>
+
+          <section className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Stat label="Farm"     value={report.farm.name} />
+            <Stat label="District" value={report.farm.district} />
+            <Stat label="Zone"     value={report.zone.name} />
+            <Stat label="Area"     value={`${report.zone.areaBigha.toFixed(2)} Bigha`} />
+          </section>
+
+          <section className="mt-6">
+            <h2 className="text-lg font-bold text-stone-900">Crop & Harvest</h2>
+            <div className="mt-3 grid gap-4 sm:grid-cols-2">
+              <Stat label="Crop"    value={report.crop?.cropName ?? 'Not assigned'} />
+              <Stat label="Variety" value={report.harvest?.varietyName ?? '—'} />
+              {report.harvest && <>
+                <Stat label="Yield"        value={`${report.harvest.yieldKg.toLocaleString()} kg`} />
+                <Stat label="Price / kg"   value={report.harvest.pricePerKg ? `₹${report.harvest.pricePerKg}` : '—'} />
+                <Stat label="Total Revenue" value={report.harvest.totalRevenue ? `₹${report.harvest.totalRevenue.toLocaleString()}` : '—'} />
+                <Stat label="Net Profit"   value={report.harvest.netProfit !== null ? `₹${report.harvest.netProfit.toLocaleString()}` : '—'} />
+                <Stat label="Harvested"    value={new Date(report.harvest.harvestedAt).toLocaleDateString()} />
+              </>}
+            </div>
+          </section>
+
+          <section className="mt-6">
+            <h2 className="text-lg font-bold text-stone-900">Performance</h2>
+            <div className="mt-3 grid gap-4 sm:grid-cols-3">
+              <Stat label="Task compliance" value={`${report.compliance}%`} />
+              <Stat label="Tasks completed" value={`${report.tasksCompleted} / ${report.tasksTotal}`} />
+              <Stat label="Issues reported" value={report.issuesCount} />
+            </div>
+          </section>
+
+          {report.photos.length > 0 && (
+            <section className="mt-6">
+              <h2 className="text-lg font-bold text-stone-900">Photo journal</h2>
+              <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
+                {report.photos.map((p, i) => (
+                  <div key={i} className="overflow-hidden rounded-2xl border border-stone-200">
+                    <img src={p.photoUrl} alt={p.caption ?? ''} className="h-20 w-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="mt-6 border-t pt-4 text-xs text-stone-500">
+            <p className="flex items-center gap-2"><FileText className="h-3 w-3" /> Report generated by iPlanFarmHouse</p>
+          </section>
+        </div>
+      </div>
+
+      <style>{`@media print { .no-print { display: none } body { background: white } }`}</style>
+    </DashboardShell>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-2xl bg-stone-50 p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">{label}</p>
+      <p className="mt-1 text-lg font-bold text-stone-900">{value}</p>
+    </div>
+  );
+}

@@ -1,0 +1,288 @@
+{
+  "name": "Model Permaculture & Agroforestry Master Plan",
+  "version": 1,
+  "status": "FINAL",
+  "gridSizeMeters": 2.0,
+  "notes": "Standard high-density natural farming model plan featuring raised companion beds, orchard windbreaks, rainwater pond, and cow shed.",
+  "designData": {
+    "version": 1,
+    "gridSizeMeters": 2.0,
+    "boundaryPolygon": [
+      [0, 0],
+      [60, 0],
+      [60, 60],
+      [0, 60]
+    ],
+    "originGeo": [81.6296, 21.2514],
+    "metersWidth": 60,
+    "metersHeight": 60,
+    "beds": [
+      {
+        "id": "bed-sample-01",
+        "name": "Bed 1 - Solanaceae Companion Guild",
+        "type": "Raised Bed",
+        "shape": "rectangle",
+        "x": 6.0,
+        "y": 6.0,
+        "width": 2.0,
+        "height": 10.0,
+        "areaSqM": 20.0,
+        "heightMm": 350,
+        "color": "#d97706",
+        "crops": [
+          {
+            "id": "crop-s01",
+            "cropName": "Tomato",
+            "category": "Vegetables",
+            "quantity": 30,
+            "spacingCm": 45,
+            "color": "#ef4444",
+            "icon": "🍅"
+          },
+          {
+            "id": "crop-s02",
+            "cropName": "Basil",
+            "category": "Herbs",
+            "quantity": 25,
+            "spacingCm": 30,
+            "color": "#10b981",
+            "icon": "🌿"
+          },
+          {
+            "id": "crop-s03",
+            "cropName": "Marigold",
+            "category": "Support Plants",
+            "quantity": 15,
+            "spacingCm": 35,
+            "color": "#f59e0b",
+            "icon": "🌼"
+          }
+        ]
+      },
+      {
+        "id": "bed-sample-02",
+        "name": "Bed 2 - Brassica & Allium Row",
+        "type": "Raised Bed",
+        "shape": "rectangle",
+        "x": 10.0,
+        "y": 6.0,
+        "width": 2.0,
+        "height": 10.0,
+        "areaSqM": 20.0,
+        "heightMm": 350,
+        "color": "#d97706",
+        "crops": [
+          {
+            "id": "crop-s04",
+            "cropName": "Cabbage",
+            "category": "Vegetables",
+            "quantity": 24,
+            "spacingCm": 50,
+            "color": "#22c55e",
+            "icon": "🥬"
+          },
+          {
+            "id": "crop-s05",
+            "cropName": "Garlic",
+            "category": "Vegetables",
+            "quantity": 60,
+            "spacingCm": 15,
+            "color": "#a8a29e",
+            "icon": "🧄"
+          }
+        ]
+      },
+      {
+        "id": "bed-sample-03",
+        "name": "Bed 3 - Hugelkultur Moisture Sponge",
+        "type": "Hugelkultur Bed",
+        "shape": "rectangle",
+        "x": 14.0,
+        "y": 6.0,
+        "width": 3.0,
+        "height": 10.0,
+        "areaSqM": 30.0,
+        "heightMm": 600,
+        "color": "#65a30d",
+        "crops": [
+          {
+            "id": "crop-s06",
+            "cropName": "Bottle Gourd",
+            "category": "Vegetables",
+            "quantity": 12,
+            "spacingCm": 100,
+            "color": "#84cc16",
+            "icon": "🥒"
+          },
+          {
+            "id": "crop-s07",
+            "cropName": "Ginger",
+            "category": "Herbs",
+            "quantity": 40,
+            "spacingCm": 25,
+            "color": "#d97706",
+            "icon": "🫚"
+          }
+        ]
+      },
+      {
+        "id": "bed-sample-04",
+        "name": "Bed 4 - Keyhole Vermicompost Garden",
+        "type": "Keyhole Bed",
+        "shape": "rectangle",
+        "x": 6.0,
+        "y": 20.0,
+        "width": 4.0,
+        "height": 4.0,
+        "areaSqM": 16.0,
+        "heightMm": 500,
+        "color": "#84cc16",
+        "crops": [
+          {
+            "id": "crop-s08",
+            "cropName": "Spinach (Palak)",
+            "category": "Vegetables",
+            "quantity": 80,
+            "spacingCm": 15,
+            "color": "#15803d",
+            "icon": "🥬"
+          },
+          {
+            "id": "crop-s09",
+            "cropName": "Coriander",
+            "category": "Herbs",
+            "quantity": 100,
+            "spacingCm": 10,
+            "color": "#16a34a",
+            "icon": "🌿"
+          }
+        ]
+      }
+    ],
+    "trees": [
+      {
+        "id": "tree-sample-01",
+        "treeName": "Mango (Alphonso / Kesar)",
+        "category": "Fruit Crops",
+        "x": 48.0,
+        "y": 10.0,
+        "canopyDiameterM": 8.0,
+        "trunkDiameterM": 0.5,
+        "spacingM": 8.0,
+        "growthCategory": "Medium",
+        "heightM": 6.0,
+        "color": "#15803d",
+        "icon": "🥭"
+      },
+      {
+        "id": "tree-sample-02",
+        "treeName": "Moringa (Drumstick)",
+        "category": "Trees",
+        "x": 48.0,
+        "y": 22.0,
+        "canopyDiameterM": 4.0,
+        "trunkDiameterM": 0.3,
+        "spacingM": 4.0,
+        "growthCategory": "Fast",
+        "heightM": 5.0,
+        "color": "#16a34a",
+        "icon": "🌱"
+      },
+      {
+        "id": "tree-sample-03",
+        "treeName": "Papaya (Red Lady)",
+        "category": "Fruit Crops",
+        "x": 48.0,
+        "y": 30.0,
+        "canopyDiameterM": 3.0,
+        "trunkDiameterM": 0.25,
+        "spacingM": 2.5,
+        "growthCategory": "Fast",
+        "heightM": 4.0,
+        "color": "#ea580c",
+        "icon": "🍈"
+      },
+      {
+        "id": "tree-sample-04",
+        "treeName": "Neem (Biological Pest Repeller)",
+        "category": "Trees",
+        "x": 4.0,
+        "y": 50.0,
+        "canopyDiameterM": 7.0,
+        "trunkDiameterM": 0.45,
+        "spacingM": 7.0,
+        "growthCategory": "Medium",
+        "heightM": 7.0,
+        "color": "#166534",
+        "icon": "🌳"
+      }
+    ],
+    "elements": [
+      {
+        "id": "elem-sample-01",
+        "name": "Rainwater Farm Pond",
+        "category": "water",
+        "type": "pond",
+        "x": 36.0,
+        "y": 38.0,
+        "width": 12.0,
+        "height": 10.0,
+        "heightM": 2.0,
+        "color": "#0284c7",
+        "icon": "🌊"
+      },
+      {
+        "id": "elem-sample-02",
+        "name": "Indigenous Cow Gaushala (Jeevamrit Unit)",
+        "category": "animal",
+        "type": "cow_shed",
+        "x": 6.0,
+        "y": 34.0,
+        "width": 8.0,
+        "height": 6.0,
+        "heightM": 3.2,
+        "color": "#b45309",
+        "icon": "🐄"
+      },
+      {
+        "id": "elem-sample-03",
+        "name": "Vermicompost & Bio-Fertilizer Pit",
+        "category": "infrastructure",
+        "type": "compost_area",
+        "x": 16.0,
+        "y": 34.0,
+        "width": 4.0,
+        "height": 4.0,
+        "heightM": 1.0,
+        "color": "#78350f",
+        "icon": "🪱"
+      },
+      {
+        "id": "elem-sample-04",
+        "name": "Main Farm Access Pathway",
+        "category": "infrastructure",
+        "type": "pathway",
+        "x": 22.0,
+        "y": 0.0,
+        "width": 2.5,
+        "height": 60.0,
+        "heightM": 0.05,
+        "color": "#e7e5e4",
+        "icon": "🛣️"
+      }
+    ],
+    "layers": {
+      "beds": true,
+      "crops": true,
+      "trees": true,
+      "water": true,
+      "buildings": true,
+      "animals": true,
+      "irrigation": true,
+      "paths": true,
+      "fencing": true,
+      "grid": true,
+      "boundary": true
+    }
+  }
+}
