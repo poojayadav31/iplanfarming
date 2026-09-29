@@ -40,10 +40,7 @@ interface DesignerCanvas2DProps {
   onUpdateTree: (tree: PlacedTree) => void;
   onAddElement: (elem: PlacedElement) => void;
   onUpdateElement: (elem: PlacedElement) => void;
-  onUpdateBedLive?: (bed: FarmBed) => void;
-  onUpdateTreeLive?: (tree: PlacedTree) => void;
-  onUpdateElementLive?: (elem: PlacedElement) => void;
-  onCommitDrag?: () => void;
+  onDeleteSelected: () => void;
   canvasRefCallback?: (canvas: HTMLCanvasElement | null) => void;
   snapToGridEnabled?: boolean;
   onToggleSnap?: () => void;
@@ -816,16 +813,6 @@ export default function DesignerCanvas2D({
 
     if (clickedBed) {
       if (activeTool === 'eraser') {
-        if (clickedBed.crops && clickedBed.crops.length > 0) {
-          const lastCrop = clickedBed.crops[clickedBed.crops.length - 1];
-          const nextCrops = clickedBed.crops.slice(0, -1);
-          onUpdateBed({
-            ...clickedBed,
-            crops: nextCrops,
-          });
-          toast.success(`Removed ${lastCrop.icon || '🌱'} ${lastCrop.cropName} from ${clickedBed.name}`);
-          return;
-        }
         onSelectBed(clickedBed.id);
         onDeleteSelected();
         return;
@@ -996,10 +983,6 @@ export default function DesignerCanvas2D({
       return;
     }
 
-    const updateBedLive = onUpdateBedLive || onUpdateBed;
-    const updateTreeLive = onUpdateTreeLive || onUpdateTree;
-    const updateElementLive = onUpdateElementLive || onUpdateElement;
-
     if (dragAction.type === 'moving-bed') {
       const deltaX = snapToGrid(m.x - dragAction.startM.x);
       const deltaY = snapToGrid(m.y - dragAction.startM.y);
@@ -1008,7 +991,7 @@ export default function DesignerCanvas2D({
         x: Math.max(0, dragAction.initialBed.x + deltaX),
         y: Math.max(0, dragAction.initialBed.y + deltaY),
       };
-      updateBedLive(updated);
+      onUpdateBed(updated);
       return;
     }
 
@@ -1039,7 +1022,7 @@ export default function DesignerCanvas2D({
         }
       }
 
-      updateBedLive({
+      onUpdateBed({
         ...init,
         x: newX,
         y: newY,
@@ -1053,7 +1036,7 @@ export default function DesignerCanvas2D({
     if (dragAction.type === 'moving-tree') {
       const deltaX = snapToGrid(m.x - dragAction.startM.x);
       const deltaY = snapToGrid(m.y - dragAction.startM.y);
-      updateTreeLive({
+      onUpdateTree({
         ...dragAction.initialTree,
         x: Math.max(0, dragAction.initialTree.x + deltaX),
         y: Math.max(0, dragAction.initialTree.y + deltaY),
@@ -1064,7 +1047,7 @@ export default function DesignerCanvas2D({
     if (dragAction.type === 'moving-elem') {
       const deltaX = snapToGrid(m.x - dragAction.startM.x);
       const deltaY = snapToGrid(m.y - dragAction.startM.y);
-      updateElementLive({
+      onUpdateElement({
         ...dragAction.initialElem,
         x: Math.max(0, dragAction.initialElem.x + deltaX),
         y: Math.max(0, dragAction.initialElem.y + deltaY),
@@ -1075,15 +1058,6 @@ export default function DesignerCanvas2D({
 
   const handleMouseUp = () => {
     setIsPanning(false);
-
-    if (
-      dragAction?.type === 'moving-bed' ||
-      dragAction?.type === 'resizing-bed' ||
-      dragAction?.type === 'moving-tree' ||
-      dragAction?.type === 'moving-elem'
-    ) {
-      onCommitDrag?.();
-    }
 
     if (dragAction?.type === 'drawing-bed') {
       const { startM, currentM } = dragAction;

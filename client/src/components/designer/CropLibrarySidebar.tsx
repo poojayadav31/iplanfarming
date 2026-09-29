@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Search,
   Sprout,
@@ -52,34 +52,6 @@ export default function CropLibrarySidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<TabCategory>('all');
   const [previewItem, setPreviewItem] = useState<CropCatalogueItem | BedTypeDefinition | FarmElementDefinition | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-
-  // Automatically sync activeTab with activeTool when clicking left sidebar tool icons
-  useEffect(() => {
-    if (activeTool === 'tree') {
-      setActiveTab('trees');
-    } else if (activeTool === 'crop') {
-      if (activeTab !== 'vegetables' && activeTab !== 'herbs' && activeTab !== 'fruit' && activeTab !== 'support') {
-        setActiveTab('vegetables');
-      }
-    } else if (activeTool === 'element') {
-      setActiveTab('elements');
-    } else if (activeTool.startsWith('draw-')) {
-      setActiveTab('bed_types');
-    }
-  }, [activeTool]);
-
-  // Smoothly scroll the active category tab button into view in the top horizontal scrollbar
-  useEffect(() => {
-    const activeEl = tabRefs.current[activeTab];
-    if (activeEl) {
-      activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 0;
-    }
-  }, [activeTab]);
 
   const TABS = [
     { id: 'all', label: 'All Items', icon: <Sparkles className="h-4 w-4" /> },
@@ -91,39 +63,6 @@ export default function CropLibrarySidebar({
     { id: 'bed_types', label: 'Bed Profiles', icon: <Layers className="h-4 w-4" /> },
     { id: 'elements', label: 'Structures & Water', icon: <Building2 className="h-4 w-4" /> },
   ];
-
-  const handleTabClick = (tabId: TabCategory) => {
-    setActiveTab(tabId);
-    if (tabId === 'trees') {
-      onSelectTool('tree');
-      const firstTree = CROP_LIBRARY.find((c) => c.category === 'Trees' || c.category === 'Fruit Crops');
-      if (firstTree && selectedCrop?.category !== 'Trees' && selectedCrop?.category !== 'Fruit Crops') {
-        onSelectCrop(firstTree);
-      }
-    } else if (tabId === 'vegetables' || tabId === 'herbs' || tabId === 'fruit' || tabId === 'support') {
-      onSelectTool('crop');
-      const catMap: Record<string, string> = {
-        vegetables: 'Vegetables',
-        herbs: 'Herbs',
-        fruit: 'Fruit Crops',
-        support: 'Support Plants',
-      };
-      const targetCat = catMap[tabId];
-      const firstCrop = CROP_LIBRARY.find((c) => c.category === targetCat);
-      if (firstCrop) {
-        onSelectCrop(firstCrop);
-      }
-    } else if (tabId === 'elements') {
-      onSelectTool('element');
-      if (FARM_ELEMENTS_CATALOGUE.length > 0 && !selectedElement) {
-        onSelectElement(FARM_ELEMENTS_CATALOGUE[0]);
-      }
-    } else if (tabId === 'bed_types') {
-      if (!activeTool.startsWith('draw-')) {
-        onSelectTool('draw-rect');
-      }
-    }
-  };
 
   const filteredCrops = useMemo(() => {
     return CROP_LIBRARY.filter((item) => {
@@ -137,7 +76,7 @@ export default function CropLibrarySidebar({
       if (activeTab === 'vegetables') return item.category === 'Vegetables';
       if (activeTab === 'herbs') return item.category === 'Herbs';
       if (activeTab === 'fruit') return item.category === 'Fruit Crops';
-      if (activeTab === 'trees') return item.category === 'Trees' || item.category === 'Fruit Crops';
+      if (activeTab === 'trees') return item.category === 'Trees';
       if (activeTab === 'support') return item.category === 'Support Plants';
       return false;
     });
@@ -202,8 +141,7 @@ export default function CropLibrarySidebar({
           {TABS.map((tab) => (
             <button
               key={tab.id}
-              ref={(el) => { tabRefs.current[tab.id] = el; }}
-              onClick={() => handleTabClick(tab.id as TabCategory)}
+              onClick={() => setActiveTab(tab.id as TabCategory)}
               className={`flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
                 activeTab === tab.id
                   ? 'bg-green-700 text-white shadow-xs'
@@ -217,7 +155,7 @@ export default function CropLibrarySidebar({
       </div>
 
       {/* ── Item Lists ── */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
         {/* Bed Types Section */}
         {filteredBedTypes.length > 0 && (
           <div>

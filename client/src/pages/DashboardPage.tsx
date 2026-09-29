@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Loader2, Store, FlaskConical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import DashboardShell from '../components/DashboardShell';
@@ -11,10 +11,6 @@ import type { Farm } from '../types/farm';
 export default function DashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const isAddingNewFarm = searchParams.get('add') === 'true' || searchParams.get('new') === 'true';
-
   const [farms, setFarms] = useState<Farm[] | null>(null);
   const [isLoading, setIsLoading] = useState(user?.role === 'FARMER');
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -49,10 +45,10 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [user?.role, location.search]);
+  }, [user?.role]);
 
   useEffect(() => {
-    if (user?.role !== 'FARMER' || !farms?.length || isAddingNewFarm) {
+    if (user?.role !== 'FARMER' || !farms?.length) {
       return;
     }
 
@@ -64,7 +60,7 @@ export default function DashboardPage() {
     }
 
     navigate(`/dashboard/farm/${farm.id}`, { replace: true });
-  }, [farms, navigate, user?.role, isAddingNewFarm]);
+  }, [farms, navigate, user?.role]);
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -134,8 +130,8 @@ export default function DashboardPage() {
 
   return (
     <DashboardShell
-      title={isAddingNewFarm ? "Locate & Map a New Farm" : "Set Up Your Farm Map"}
-      subtitle={isAddingNewFarm ? "Search a new location in Chhattisgarh and draw the outer boundary of your new farm." : "Start by drawing the outer boundary of your farm. Area is shown mainly in bigha for Chhattisgarh farmers."}
+      title="Set Up Your Farm Map"
+      subtitle="Start by drawing the outer boundary of your farm. Area is shown mainly in bigha for Chhattisgarh farmers."
     >
       {isLoading ? (
         <div className="flex min-h-[50vh] items-center justify-center rounded-[28px] border border-stone-200 bg-white">
@@ -146,7 +142,7 @@ export default function DashboardPage() {
           <p className="text-lg font-semibold text-red-700">Could not load farm setup</p>
           <p className="mt-2 text-sm text-stone-600">{loadError}</p>
         </div>
-      ) : (farms?.length && !isAddingNewFarm) ? (
+      ) : farms?.length ? (
         <div className="flex min-h-[40vh] items-center justify-center rounded-[28px] border border-stone-200 bg-white">
           <Loader2 className="h-8 w-8 animate-spin text-green-700" />
         </div>

@@ -213,64 +213,34 @@ export default function FarmDesignerStudio({ farm, initialDesignId }: FarmDesign
   }, [isGridMenuOpen, isObjectsMenuOpen]);
 
   // ── Push State to Undo/Redo History ──
-  const historyRef = useRef<{ beds: FarmBed[]; trees: PlacedTree[]; elements: PlacedElement[] }[]>([]);
-  const historyIndexRef = useRef<number>(-1);
-
   const pushHistory = useCallback(
     (newBeds: FarmBed[], newTrees: PlacedTree[], newElements: PlacedElement[]) => {
-      // Deep clone snapshot to decouple memory references completely
-      const snapshot = JSON.parse(
-        JSON.stringify({
-          beds: newBeds,
-          trees: newTrees,
-          elements: newElements,
-        })
-      );
-
-      const curIndex = historyIndexRef.current;
-      const updatedHistory = historyRef.current.slice(0, curIndex + 1);
-      updatedHistory.push(snapshot);
-
-      historyRef.current = updatedHistory;
-      historyIndexRef.current = updatedHistory.length - 1;
-
-      setHistory(updatedHistory);
-      setHistoryIndex(updatedHistory.length - 1);
+      setHistory((prev) => {
+        const next = prev.slice(0, historyIndex + 1);
+        return [...next, { beds: newBeds, trees: newTrees, elements: newElements }];
+      });
+      setHistoryIndex((prev) => prev + 1);
     },
-    []
+    [historyIndex]
   );
 
   const handleUndo = () => {
-    if (historyIndexRef.current > 0) {
-      const nextIndex = historyIndexRef.current - 1;
-      const prevState = historyRef.current[nextIndex];
-      historyIndexRef.current = nextIndex;
-      setHistoryIndex(nextIndex);
-
-      const restoredBeds = JSON.parse(JSON.stringify(prevState.beds));
-      const restoredTrees = JSON.parse(JSON.stringify(prevState.trees));
-      const restoredElements = JSON.parse(JSON.stringify(prevState.elements));
-
-      setBeds(restoredBeds);
-      setTrees(restoredTrees);
-      setElements(restoredElements);
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1];
+      setBeds(prevState.beds);
+      setTrees(prevState.trees);
+      setElements(prevState.elements);
+      setHistoryIndex(historyIndex - 1);
     }
   };
 
   const handleRedo = () => {
-    if (historyIndexRef.current < historyRef.current.length - 1) {
-      const nextIndex = historyIndexRef.current + 1;
-      const nextState = historyRef.current[nextIndex];
-      historyIndexRef.current = nextIndex;
-      setHistoryIndex(nextIndex);
-
-      const restoredBeds = JSON.parse(JSON.stringify(nextState.beds));
-      const restoredTrees = JSON.parse(JSON.stringify(nextState.trees));
-      const restoredElements = JSON.parse(JSON.stringify(nextState.elements));
-
-      setBeds(restoredBeds);
-      setTrees(restoredTrees);
-      setElements(restoredElements);
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1];
+      setBeds(nextState.beds);
+      setTrees(nextState.trees);
+      setElements(nextState.elements);
+      setHistoryIndex(historyIndex + 1);
     }
   };
 
@@ -325,22 +295,6 @@ export default function FarmDesignerStudio({ farm, initialDesignId }: FarmDesign
   }, [farm.id, initialDesignId, pushHistory]);
 
   // ── Entity Modification Handlers with History Tracking ──
-
-  const handleUpdateBedLive = (updatedBed: FarmBed) => {
-    setBeds((prevBeds) => prevBeds.map((b) => (b.id === updatedBed.id ? updatedBed : b)));
-  };
-
-  const handleUpdateTreeLive = (updatedTree: PlacedTree) => {
-    setTrees((prevTrees) => prevTrees.map((t) => (t.id === updatedTree.id ? updatedTree : t)));
-  };
-
-  const handleUpdateElementLive = (updatedElem: PlacedElement) => {
-    setElements((prevElems) => prevElems.map((e) => (e.id === updatedElem.id ? updatedElem : e)));
-  };
-
-  const handleCommitDrag = () => {
-    pushHistory(beds, trees, elements);
-  };
 
   const handleAddBed = (newBed: FarmBed) => {
     const nextBeds = [...beds, newBed];
@@ -1268,14 +1222,10 @@ export default function FarmDesignerStudio({ farm, initialDesignId }: FarmDesign
               onSelectElement={(id) => { setSelectedElementId(id); setSelectedBedId(null); setSelectedTreeId(null); }}
               onAddBed={handleAddBed}
               onUpdateBed={handleUpdateBed}
-              onUpdateBedLive={handleUpdateBedLive}
               onAddTree={handleAddTree}
               onUpdateTree={handleUpdateTree}
-              onUpdateTreeLive={handleUpdateTreeLive}
               onAddElement={handleAddElement}
               onUpdateElement={handleUpdateElement}
-              onUpdateElementLive={handleUpdateElementLive}
-              onCommitDrag={handleCommitDrag}
               onDeleteSelected={handleDeleteSelected}
               canvasRefCallback={(c) => { canvas2DRef.current = c; }}
               snapToGridEnabled={snapToGridEnabled}

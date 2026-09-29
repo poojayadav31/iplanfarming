@@ -56,6 +56,14 @@ export const createFarm = async (req, res) => {
   }
 
   const polygon = assertPolygon(boundary);
+  const existingFarm = await prisma.farm.findFirst({
+    where: { farmerId },
+  });
+
+  if (existingFarm) {
+    throw new AppError("You already have an active farm", 409);
+  }
+
   const metrics = calculateFarmMetrics(polygon);
   let resolvedAreaBigha = metrics.areaBigha;
 
